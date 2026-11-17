@@ -1,0 +1,17 @@
+# Core numerics / deep learning
+torch>=2.1
+numpy>=1.24
+# Image processing
+opencv-python>=4.8
+scikit-image>=0.21
+PyWavelets>=1.4          # required by skimage denoise_wavelet (restore: wavelet)
+Pillow>=10.0
+# ML utilities, data handling, plotting
+scikit-learn>=1.3
+pandas>=2.0
+matplotlib>=3.7
+pyyaml>=6.0
+tqdm>=4.65
+joblib>=1.3
+# Hugging Face datasets (PlantVillage download)
+datasets>=2.14

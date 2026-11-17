@@ -1,0 +1,8 @@
+# Local environment and caches
+.venv/
+__pycache__/
+
+# Generated outputs (anchored to the project root, so docs/figures/ is still committed)
+/data/
+/results/
+/figures/

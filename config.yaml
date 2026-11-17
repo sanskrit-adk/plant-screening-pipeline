@@ -1,0 +1,62 @@
+# ===================================================================
+# Tomato-leaf field screening pipeline: all settings live here.
+# Run from the project root:  python -m src.experiments --exp <name>
+# ===================================================================
+
+seed: 42                         # master seed (data sampling, splits, training)
+
+data:
+  source: hf                     # hf | folder | synthetic
+  hf_name: mohanty/PlantVillage  # Hugging Face dataset id (config "color" is used)
+  folder_root: data/raw          # for source=folder: data/raw/color/<Class>/*.jpg
+  cache: data/cache/tomato.npz   # preprocessed cache (synthetic uses its own file)
+  img_size: 128                  # images resized to img_size x img_size (INTER_AREA)
+  pos_to_neg_ratio: 2.0          # keep all healthy, at most 2x as many diseased
+  val_frac: 0.15                 # validation fraction (leaf-grouped)
+  test_frac: 0.15                # test fraction (leaf-grouped; HF uses its own test split)
+  synthetic_n: 600               # number of fake leaves for source=synthetic
+
+# Controlled field degradation applied on the fly (deterministic per image/attempt)
+degrade:
+  noise_sigma: 20                # additive Gaussian noise std (grey levels, 0-255)
+  sp_prob: 0.0                   # salt & pepper probability per pixel (0 = off)
+  illum_min: 0.4                 # illumination field minimum gain
+  illum_max: 1.2                 # illumination field maximum gain
+  blur_ksize: 0                  # optional Gaussian (motion/focus) blur, 0 = off
+
+# Default pipeline; every stage can be switched off independently
+pipeline:
+  restore: nlm                   # none | gaussian | median | bilateral | nlm | wavelet
+  enhance: clahe                 # none | clahe | histeq | gamma
+  jpeg_q: 50                     # JPEG quality 1-100; null = lossless (no compression)
+  segment: true                  # leaf segmentation + background removal + crop
+
+train:
+  epochs: 15
+  batch_size: 64
+  lr: 0.001
+  patience: 4                    # early stopping on validation loss
+  device: auto                   # auto | cpu | cuda | mps
+  n_jobs: -1                     # joblib workers for preprocessing (-1 = all cores)
+
+# Asymmetric decision costs
+costs:
+  fn: 50                         # CLEAR a diseased leaf (missed disease)
+  fp: 1                          # FLAG a healthy leaf (wasted inspection)
+  reimage: 2                     # take another photo (plus the cost of the 2nd decision)
+
+# Safety gates: a failing gate forces RE-IMAGE, and never CLEAR on the 2nd attempt
+gates:
+  min_mean: 35                   # gate 1: mean grey level of the raw capture
+  max_mean: 235
+  mask_area_min: 0.05            # gate 2: leaf-mask area fraction
+  mask_area_max: 0.95
+
+experiments:
+  seeds: [42, 43, 44]            # ablation repeats (use [42] to save time)
+  jpeg_qualities: [95, 75, 50, 30, 15, 10, 5]
+  denoise_methods: [none, gaussian, median, bilateral, nlm, wavelet]
+  noise_sigmas: [10, 20, 30]
+  degrade_tolerance_pp: 1.0      # compression knee tolerance (percentage points)
+  stress_illum_min: 0.12         # harsh-lighting stress test (illum_min override)
+  latency_n: 100                 # images used for per-stage latency benchmarks

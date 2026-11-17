@@ -1,0 +1,87 @@
+{
+    // One debug configuration per experiment. Each runs `python -m src.experiments`
+    // from the project root so that relative paths (config.yaml, data/, results/) resolve.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Quick smoke test (all, --quick)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "all", "--quick"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: ablation",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "ablation"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: compression",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "compression"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: compression (--retrain)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "compression", "--retrain"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: denoise",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "denoise"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: figures",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "figures"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: propagation",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "propagation"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Experiment: all",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.experiments",
+            "args": ["--exp", "all"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
