@@ -189,7 +189,9 @@ def run_config(name: str, data: dict, cfg: dict, p: PipelineConfig, seed: int, m
                gate_fail_rate=float((~gt0).mean()))
     extras = dict(p_test0=pt0, p_test1=pt1, gate_test0=gt0, gate_test1=gt1, y_test=y[te],
                   cost=per_cost, area_test0=area0, masks_test0=m0,
-                  baselines=baseline_policies(pt0, y[te], costs))
+                  baselines=baseline_policies(pt0, y[te], costs),
+                  # validation arrays (used by src/export_web.py for in-browser threshold search)
+                  p_val0=pv0, p_val1=pv1, gate_val0=gv0, gate_val1=gv1, y_val=y[va])
     if verbose:
         print(f"  [{name}] cost={row['cost_per_sample']:.3f} sens={row['sensitivity']:.3f} "
               f"spec={row['specificity']:.3f} acc={row['cnn_acc']:.3f} auc={row['auc']:.3f} "

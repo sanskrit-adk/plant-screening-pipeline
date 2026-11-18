@@ -8,7 +8,7 @@ field capture ─► [GATE 1 exposure] ─► restore ─► enhance ─► JPEG
              ─► decision agent: CLEAR / FLAG / RE-IMAGE  (asymmetric cost)
 ```
 
-**Project page:** <https://sanskrit-adk.github.io/plant-screening-pipeline/> (served from `docs/`)
+**Live screening lab:** <https://sanskrit-adk.github.io/plant-screening-pipeline/>. Upload a leaf photo, or pick a held-out PlantVillage test leaf, and watch all seven phases run in your browser. Experiment results are at [`results.html`](https://sanskrit-adk.github.io/plant-screening-pipeline/results.html).
 
 Missing a diseased leaf (CLEAR when diseased) costs **50**, flagging a healthy leaf costs **1**, and a re-image costs **2** plus the second decision. Every stage can be switched off on its own, and the experiments measure what each stage is worth.
 
@@ -109,6 +109,9 @@ python -m src.experiments --exp ablation --config my_config.yaml
 | `src/model.py` | `SmallCNN`, training with early stopping, temperature scaling, latency |
 | `src/decision.py` | cost-sensitive CLEAR / FLAG / RE-IMAGE agent, threshold search, baselines |
 | `src/experiments.py` | all experiments, figures and the CLI |
+| `src/export_web.py` | trains the full pipeline and exports the model, samples and parity data for the website |
+| `tools/web_parity.mjs` | Node check that the JavaScript port reproduces the Python pipeline |
+| `docs/` | the GitHub Pages site (screening lab + results page) |
 | `results/` | CSV / JSON outputs |
 | `figures/` | PNG outputs |
 
@@ -183,7 +186,42 @@ Six configurations are compared: `full`, `no_restoration`, `no_enhancement`, `no
 
 ---
 
-## 7. Reproducibility
+## 7. The website (`docs/`, GitHub Pages)
+
+`docs/index.html` is an interactive **screening lab**. Everything runs client-side in plain JavaScript, with no server and no framework:
+
+| phase | course topic | in the browser |
+|---|---|---|
+| 1 | fundamental steps: acquisition | field degradation (illumination field + Gaussian noise), safety gate 1 |
+| 2 | restoration (objective) | Gaussian / median / bilateral / non-local means, scored by PSNR and SSIM against the noise-free reference |
+| 3 | enhancement (subjective) | CLAHE / histogram equalisation / gamma, with histograms, RMS contrast and entropy |
+| 4 | compression | real JPEG through the browser's encoder: bytes, ratio, PSNR, error map |
+| 5 | morphology + segmentation | saturation → Otsu → opening → closing → largest component → hole fill, safety gate 2 |
+| 6 | recognition, CNN basics | SmallCNN forward pass with feature maps of every block, logits, temperature-scaled softmax |
+| 7 | utility-based agent | expected cost of CLEAR / FLAG, RE-IMAGE band on a log-odds axis, a second photo when asked; editing the costs re-runs the threshold search on the validation set |
+
+| file | role |
+|---|---|
+| `docs/js/imgproc.js` | port of `src/degrade.py` and `src/stages.py`, following OpenCV's algorithms, kernels, border modes and rounding |
+| `docs/js/cnn.js` | SmallCNN inference (BatchNorm folded into the convolutions) |
+| `docs/js/agent.js` | port of `src/decision.py`, including the threshold search |
+| `docs/js/app.js`, `docs/css/app.css` | page logic and styling |
+| `docs/model/` | exported weights, temperature, thresholds, test metrics and validation probabilities |
+| `docs/samples/` | one held-out test photo per tomato class |
+| `docs/results.html` | experiment results page |
+
+**Rebuilding the model and checking the port:**
+
+```bash
+python -m src.export_web        # train the full pipeline on real data, write docs/model, docs/samples, results/web_check
+node tools/web_parity.mjs       # compare every JS stage and the end-to-end accuracy with Python
+```
+
+To preview locally, serve `docs/` over HTTP (`python -m http.server -d docs 8000`) and open <http://localhost:8000>. Opening the file directly does not work, because browsers block `fetch` from `file://`.
+
+---
+
+## 8. Reproducibility
 
 - **Seeding:** `set_seed` fixes Python, NumPy and PyTorch (CPU and CUDA), sets `PYTHONHASHSEED`, and sets `cudnn.deterministic = True` and `benchmark = False`.
 - **Data loading:** the DataLoader shuffles with a seeded `torch.Generator` and `num_workers = 0`.

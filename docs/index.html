@@ -3,276 +3,277 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>body{margin:0}img{max-width:100%}</style>
-<title>Tomato Leaf Field Screening</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<title>Leaf Screening Lab</title>
+<meta name="description" content="Screen a tomato leaf photo step by step in your browser: restoration, enhancement, JPEG compression, morphology, segmentation, a CNN and a utility-based CLEAR / FLAG / RE-IMAGE agent.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<style>
-/* Layout: a single reading column (~70ch) with wide figure plates; the pipeline is a horizontal chain of stage chips that wraps on phones. */
-:root {
-  --bg: #f6f8f5;          /* paper with a faint chlorophyll bias */
-  --surface: #ffffff;
-  --fg: #17201a;
-  --muted: #56625a;
-  --line: #d9e1da;
-  --leaf: #2f7d3b;        /* accent: healthy leaf green */
-  --lesion: #9a4f1e;      /* secondary: lesion brown, used for "diseased" and cost */
-  --leaf-soft: #e3f0e4;
-  --lesion-soft: #f6e8de;
-  --plate: #ffffff;       /* figures are light PNGs; they always sit on a light plate */
-  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111612; --surface: #182019; --fg: #e6ece7; --muted: #a3b0a6; --line: #2c372e;
-    --leaf: #6cc27a; --lesion: #e39a66; --leaf-soft: #1f3324; --lesion-soft: #3a2619; --plate: #f4f6f4;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #111612; --surface: #182019; --fg: #e6ece7; --muted: #a3b0a6; --line: #2c372e;
-  --leaf: #6cc27a; --lesion: #e39a66; --leaf-soft: #1f3324; --lesion-soft: #3a2619; --plate: #f4f6f4;
-  color-scheme: dark;
-}
-
-body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
-.wrap { max-width: 1040px; margin: 0 auto; padding-block: 48px 72px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex; flex-direction: column; gap: 56px; }
-section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.prose { max-width: 70ch; }
-h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
-h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
-h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.01em; }
-h3 { font-size: 1.1rem; font-weight: 700; }
-p { margin: 0; }
-.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--leaf); }
-.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
-a { color: var(--leaf); text-underline-offset: 3px; }
-a:focus-visible, summary:focus-visible { outline: 2px solid var(--leaf); outline-offset: 3px; border-radius: 3px; }
-code, .mono { font-family: var(--f-mono); font-size: 0.88em; }
-code { background: var(--leaf-soft); padding: 1px 5px; border-radius: 4px; }
-
-/* Hero */
-header { display: flex; flex-direction: column; gap: 16px; }
-.costs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.cost { display: flex; align-items: baseline; gap: 10px; border: 1px solid var(--line); background: var(--surface);
-  padding: 10px 14px; border-radius: 8px; }
-.cost b { font-family: var(--f-mono); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
-.cost.fn b { color: var(--lesion); }
-.cost span { color: var(--muted); font-size: 0.9rem; }
-
-/* Pipeline chain */
-.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.stage { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 12px;
-  display: flex; flex-direction: column; gap: 2px; }
-.stage .k { font-family: var(--f-mono); font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-.stage .v { font-weight: 600; font-size: 0.95rem; }
-.stage.gate { border-style: dashed; border-color: var(--lesion); }
-.stage.gate .k { color: var(--lesion); }
-.stage.out { background: var(--leaf-soft); border-color: var(--leaf); }
-.arrow { color: var(--muted); font-family: var(--f-mono); }
-
-/* Stage detail grid */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
-  display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.card p { color: var(--muted); font-size: 0.93rem; }
-.tag { align-self: flex-start; font-family: var(--f-mono); font-size: 0.7rem; padding: 2px 7px; border-radius: 999px;
-  background: var(--leaf-soft); color: var(--leaf); }
-.tag.subj { background: var(--lesion-soft); color: var(--lesion); }
-
-/* Decision rule */
-.rule { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px;
-  font-family: var(--f-mono); font-size: 0.88rem; line-height: 1.75; overflow-x: auto; white-space: pre; }
-.rule .c { color: var(--muted); }
-.rule .flag { color: var(--lesion); font-weight: 500; }
-.rule .clear { color: var(--leaf); font-weight: 500; }
-
-/* Notice */
-.notice { border-left: 3px solid var(--lesion); background: var(--lesion-soft); padding: 12px 16px; border-radius: 0 6px 6px 0;
-  font-size: 0.95rem; max-width: 80ch; }
-
-/* Figures */
-figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-figure .plate { background: var(--plate); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
-figure img { display: block; width: 100%; height: auto; max-width: 100%; }
-figcaption { color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
-
-/* Tables */
-.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
-table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
-th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
-th:first-child, td:first-child { text-align: left; }
-th { font-family: var(--f-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
-td { font-variant-numeric: tabular-nums; }
-tr:last-child td { border-bottom: 0; }
-tr.hl td { background: var(--leaf-soft); }
-.yes { color: var(--lesion); font-weight: 600; }
-
-/* Run */
-pre.cmd { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
-  font-family: var(--f-mono); font-size: 0.85rem; overflow-x: auto; line-height: 1.7; }
-pre.cmd .c { color: var(--muted); }
-ul.links { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; }
-footer { color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); padding-top: 18px; }
-</style>
-
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 19c0-8 5-13 14-14-1 9-6 14-14 14z' fill='%232f7d3b'/%3E%3C/svg%3E">
 </head>
 <body>
 <div class="wrap">
 
-<header>
-  <span class="eyebrow">PlantVillage · tomato · binary screening</span>
-  <h1>Tomato Leaf Field Screening</h1>
-  <p class="lede">A field unit photographs tomato leaves under noise, uneven light and a thin uplink. A pipeline of image restoration, enhancement, JPEG transmission, segmentation and a small CNN feeds a decision agent that chooses <strong>CLEAR</strong>, <strong>FLAG</strong> or <strong>RE-IMAGE</strong>. Every stage can be switched off, and the experiments measure what each one is worth.</p>
-  <div class="costs" aria-label="Decision costs">
-    <div class="cost fn"><b>50</b><span>clear a diseased leaf (miss)</span></div>
-    <div class="cost"><b>1</b><span>flag a healthy leaf</span></div>
-    <div class="cost"><b>2</b><span>re-image, plus the second decision</span></div>
+<div class="top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 19 13 11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Leaf Screening Lab
   </div>
-</header>
-
-<section>
-  <span class="eyebrow">The chain</span>
-  <h2>From field capture to decision</h2>
-  <div class="chain" role="list">
-    <div class="stage" role="listitem"><span class="k">capture</span><span class="v">noisy, uneven light</span></div><span class="arrow">→</span>
-    <div class="stage gate" role="listitem"><span class="k">gate 1</span><span class="v">exposure 35–235</span></div><span class="arrow">→</span>
-    <div class="stage" role="listitem"><span class="k">restore</span><span class="v">NLM denoise</span></div><span class="arrow">→</span>
-    <div class="stage" role="listitem"><span class="k">enhance</span><span class="v">CLAHE on L</span></div><span class="arrow">→</span>
-    <div class="stage" role="listitem"><span class="k">transmit</span><span class="v">JPEG q50</span></div><span class="arrow">→</span>
-    <div class="stage" role="listitem"><span class="k">segment</span><span class="v">Otsu + morphology</span></div><span class="arrow">→</span>
-    <div class="stage gate" role="listitem"><span class="k">gate 2</span><span class="v">leaf area 5–95%</span></div><span class="arrow">→</span>
-    <div class="stage" role="listitem"><span class="k">classify</span><span class="v">SmallCNN + temp. scaling</span></div><span class="arrow">→</span>
-    <div class="stage out" role="listitem"><span class="k">decide</span><span class="v">clear / flag / re-image</span></div>
-  </div>
-  <div class="grid">
-    <div class="card"><span class="tag">objective</span><h3>Restoration</h3><p>Gaussian, median, bilateral, non-local means or wavelet. Scored by PSNR and SSIM against the noise-free reference that the degradation model keeps.</p></div>
-    <div class="card"><span class="tag subj">subjective</span><h3>Enhancement</h3><p>CLAHE, histogram equalisation or gamma 0.7, applied to luminance only so lesion colour survives. There is no ground truth to score it against.</p></div>
-    <div class="card"><span class="tag">bandwidth</span><h3>Compression</h3><p>JPEG at quality q, decoded as the receiver sees it. Lossless mode encodes PNG only to measure size. Ratio = 128·128·3 / bytes.</p></div>
-    <div class="card"><span class="tag">morphology</span><h3>Segmentation</h3><p>Saturation, Otsu threshold, open 5×5, close 7×7 twice, largest component, hole fill. The leaf is masked, cropped and resized for the CNN.</p></div>
-  </div>
-</section>
-
-<section>
-  <span class="eyebrow">Decision layer</span>
-  <h2>A utility-based agent</h2>
-  <p class="prose">With a calibrated P(diseased) = p, clearing costs p·50 in expectation and flagging costs (1−p)·1. Flagging is cheaper once p exceeds 1/51 ≈ 0.0196, the Bayes threshold. An uncertainty band [t<sub>low</sub>, t<sub>high</sub>] is chosen on validation by exhaustive search; the test set is simulated once.</p>
-  <div class="rule"><span class="c"># first photo</span>
-if gate failed or t_low ≤ p1 ≤ t_high:   RE-IMAGE
-elif p1 > t_high:                        <span class="flag">FLAG</span>
-else:                                    <span class="clear">CLEAR</span>
-
-<span class="c"># second photo (after a re-image)</span>
-if gate failed:                          <span class="flag">FLAG</span>      <span class="c"># a failed gate never clears</span>
-elif p2 > 1/51:                          <span class="flag">FLAG</span>
-else:                                    <span class="clear">CLEAR</span></div>
-</section>
-
-<section>
-  <span class="eyebrow">Experiments</span>
-  <h2>What is each stage worth?</h2>
-  <div class="grid">
-    <div class="card"><h3>Ablation</h3><p>Full pipeline vs each stage off, plus CNN only. Retrained per config and seed. Paired bootstrap CI on cost vs full.</p></div>
-    <div class="card"><h3>Compression sweep</h3><p>Lossless, then q 95 → 5. Finds the knee where accuracy or sensitivity drops more than 1 pp, and the safe operating point.</p></div>
-    <div class="card"><h3>Denoising</h3><p>PSNR, SSIM and latency per method at σ 10/20/30, then end-to-end effect on the decision.</p></div>
-    <div class="card"><h3>Error propagation</h3><p>Normal vs harsh lighting, safety gates on vs off. Tracks misses, gate failures and segmentation IoU.</p></div>
-  </div>
-  <p class="notice"><strong>These numbers come from a smoke test, not from the real dataset.</strong> They are from <code>--quick</code> on synthetic leaves: 200 training images, 2 epochs, one seed. The CNN is barely trained (≈35% accuracy at the 0.5 threshold), so the comparisons below are not findings. They show that every experiment runs end to end. Run the full experiments on PlantVillage for real results.</p>
-</section>
-
-<section>
-  <h3>Ablation (smoke test)</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>Config</th><th>Cost / leaf</th><th>Sensitivity</th><th>CNN acc.</th><th>Δ cost vs full</th><th>95% CI</th><th>Measurable</th></tr></thead>
-    <tbody>
-      <tr class="hl"><td>full</td><td>0.312</td><td>1.000</td><td>0.350</td><td>0.000</td><td>[0.000, 0.000]</td><td>—</td></tr>
-      <tr><td>no_restoration</td><td>0.300</td><td>1.000</td><td>0.375</td><td>−0.013</td><td>[−0.075, 0.050]</td><td>no</td></tr>
-      <tr><td>no_enhancement</td><td>0.237</td><td>1.000</td><td>0.350</td><td>−0.075</td><td>[−0.150, −0.025]</td><td class="yes">yes</td></tr>
-      <tr><td>no_compression</td><td>0.938</td><td>0.981</td><td>0.350</td><td>0.625</td><td>[0.000, 1.875]</td><td>no</td></tr>
-      <tr><td>no_segmentation</td><td>0.300</td><td>1.000</td><td>0.350</td><td>−0.013</td><td>[−0.062, 0.037]</td><td>no</td></tr>
-      <tr><td>cnn_only</td><td>0.338</td><td>1.000</td><td>0.350</td><td>0.025</td><td>[−0.025, 0.075]</td><td>no</td></tr>
-    </tbody>
-  </table></div>
-  <figure><div class="plate"><img src="figures/ablation.png" alt="Bar charts of expected cost per leaf and sensitivity for each ablation configuration, full pipeline highlighted"></div>
-    <figcaption>Expected cost and sensitivity per configuration (mean ± std over seeds; one seed in the smoke test).</figcaption></figure>
-</section>
-
-<section>
-  <h3>Compression (smoke test)</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>Setting</th><th>Ratio</th><th>KB / image</th><th>PSNR (dB)</th><th>Sensitivity</th><th>Cost / leaf</th></tr></thead>
-    <tbody>
-      <tr><td>lossless (PNG)</td><td>2.1 : 1</td><td>23.2</td><td>—</td><td>0.981</td><td>0.938</td></tr>
-      <tr><td>q75</td><td>21.4 : 1</td><td>2.25</td><td>36.7</td><td>0.962</td><td>1.575</td></tr>
-      <tr><td>q30</td><td>34.5 : 1</td><td>1.39</td><td>33.8</td><td>1.000</td><td>0.312</td></tr>
-      <tr><td>q5</td><td>49.9 : 1</td><td>0.96</td><td>26.3</td><td>0.962</td><td>1.587</td></tr>
-    </tbody>
-  </table></div>
-  <figure><div class="plate"><img src="figures/compression_sweep.png" alt="Accuracy and sensitivity against compression ratio, and decision cost against kilobytes per image"></div>
-    <figcaption>(a) Accuracy and sensitivity against compression ratio, with the knee marked. (b) Decision cost against bandwidth.</figcaption></figure>
-  <figure><div class="plate"><img src="figures/jpeg_artifacts.png" alt="Zoomed leaf crops at JPEG quality 95, 30, 10 and 5 with absolute error maps"></div>
-    <figcaption>JPEG block artefacts on a zoomed crop, and the absolute error against the uncompressed image.</figcaption></figure>
-</section>
-
-<section>
-  <h3>Restoration and enhancement</h3>
-  <div class="tbl"><table>
-    <thead><tr><th>Denoiser (σ = 20)</th><th>PSNR (dB)</th><th>SSIM</th><th>ms / image</th></tr></thead>
-    <tbody>
-      <tr><td>none</td><td>22.16</td><td>0.231</td><td>0.00</td></tr>
-      <tr><td>median 5×5</td><td>32.74</td><td>0.802</td><td>0.32</td></tr>
-      <tr class="hl"><td>non-local means</td><td>35.32</td><td>0.949</td><td>74.1</td></tr>
-    </tbody>
-  </table></div>
-  <figure><div class="plate"><img src="figures/restoration_vs_enhancement.png" alt="Five panels: clean leaf, noisy capture, NLM restored, dim uneven capture, CLAHE enhanced"></div>
-    <figcaption>Restoration is scored against a known reference; enhancement is judged by contrast and entropy because no reference exists.</figcaption></figure>
-  <figure><div class="plate"><img src="figures/denoise.png" alt="PSNR per denoiser against noise level, and end-to-end accuracy and sensitivity per denoiser"></div>
-    <figcaption>Objective restoration quality per method, and its end-to-end effect after retraining.</figcaption></figure>
-  <figure><div class="plate"><img src="figures/segmentation_steps.png" alt="Segmentation steps: restored and enhanced image, saturation channel, binary mask, masked crop"></div>
-    <figcaption>Segmentation steps. Mean IoU against ground-truth masks was 0.96 in the smoke test.</figcaption></figure>
-</section>
-
-<section>
-  <h3>Error propagation (smoke test)</h3>
-  <p class="prose">Harsh lighting (illumination floor 0.12) triggered no gate failures on synthetic leaves, so gates on and off gave identical results here. On real data, lower the illumination ceiling or raise the exposure gate's floor if the stress test should exercise the gates.</p>
-</section>
-
-<section>
-  <span class="eyebrow">Run it</span>
-  <h2>Reproduce locally</h2>
-  <pre class="cmd"><span class="c"># setup (Windows; use source .venv/bin/activate on macOS/Linux)</span>
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-
-<span class="c"># smoke test, no download</span>
-python -m src.experiments --exp all --quick --source synthetic
-
-<span class="c"># real PlantVillage (downloads about 2 GB once)</span>
-python -m src.experiments --exp all</pre>
-  <p class="prose">The full ablation trains 18 CNNs, about 1–2 hours on a CPU. Set <code>experiments.seeds: [42]</code> in <code>config.yaml</code> to cut that to 6.</p>
-</section>
-
-<section>
-  <span class="eyebrow">Data</span>
-  <h2>Dataset and references</h2>
-  <p class="prose">PlantVillage has about 54,000 leaf images in 38 classes on a plain background. This project uses the 10 tomato classes: <code>Tomato___healthy</code> is label 0, and the 9 diseases merged are label 1. All healthy images are kept, with at most twice as many diseased. Splits are grouped by physical leaf so no leaf appears in two splits.</p>
-  <ul class="links">
-    <li><a href="https://huggingface.co/datasets/mohanty/PlantVillage" target="_blank" rel="noopener">Hugging Face: mohanty/PlantVillage</a> (loaded by default; includes segmented masks)</li>
-    <li><a href="https://github.com/spMohanty/PlantVillage-Dataset" target="_blank" rel="noopener">Official GitHub repository</a></li>
-    <li><a href="https://www.tensorflow.org/datasets/catalog/plant_village" target="_blank" rel="noopener">TensorFlow Datasets catalog page</a> (class list and size)</li>
-    <li><a href="https://arxiv.org/abs/1511.08060" target="_blank" rel="noopener">Hughes &amp; Salathé (2015), arXiv:1511.08060</a> (original dataset paper)</li>
-    <li><a href="https://doi.org/10.3389/fpls.2016.01419" target="_blank" rel="noopener">Mohanty, Hughes &amp; Salathé (2016), Frontiers in Plant Science 7:1419</a></li>
-    <li><a href="https://plantvillage.psu.edu/" target="_blank" rel="noopener">PlantVillage project website</a></li>
-  </ul>
-</section>
-
-<footer>Built with PyTorch, OpenCV and scikit-image. Results on this page are from the synthetic smoke test of 17 November 2026.</footer>
+  <nav>
+    <a href="#phase-1">Phases</a>
+    <a href="results.html">Experiment results</a>
+    <a href="https://github.com/sanskrit-adk/plant-screening-pipeline" target="_blank" rel="noopener">Source code</a>
+  </nav>
 </div>
+
+<!-- ============================ Workbench ============================ -->
+<section class="hero">
+  <div class="intro">
+    <span class="eyebrow">Integrative: computer vision · CNN · agents</span>
+    <h1>Screen a tomato leaf, one phase at a time</h1>
+    <p class="lede">Pick a leaf or upload your own photo. The browser simulates a noisy, unevenly lit field capture, then runs every phase of the pipeline: restoration, enhancement, JPEG transmission, morphology and segmentation, CNN recognition, and a utility-based agent that decides to <strong>CLEAR</strong>, <strong>FLAG</strong> or <strong>RE-IMAGE</strong>. Nothing is uploaded; all processing happens on your device.</p>
+    <div class="topics">
+      <span class="topic">fundamental steps of DIP</span><span class="topic">enhancement vs restoration</span>
+      <span class="topic">compression</span><span class="topic">morphological processing</span>
+      <span class="topic">segmentation</span><span class="topic">recognition</span>
+      <span class="topic">CNN basics</span><span class="topic">utility-based agent</span>
+    </div>
+
+    <div class="panel">
+      <label class="drop" id="drop" for="file">
+        <input type="file" id="file" accept="image/*">
+        <strong>Upload a leaf photo</strong>
+        <span class="muted">Drop an image here or click to choose. A single leaf on a plain background works best.</span>
+      </label>
+      <h3>Or try a held-out PlantVillage test leaf</h3>
+      <div class="samples" id="samples"></div>
+    </div>
+  </div>
+
+  <aside class="panel verdict" aria-live="polite">
+    <span class="eyebrow">Screening result</span>
+    <div class="preview">
+      <canvas id="v-thumb" width="128" height="128" aria-label="Captured leaf"></canvas>
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <span class="badge idle" id="v-badge">Waiting</span>
+        <span class="status" id="v-status">Loading the model…</span>
+      </div>
+    </div>
+    <p id="v-reason" class="muted">Choose a leaf to start.</p>
+    <dl class="kv" id="v-kv"></dl>
+    <div id="v-second"></div>
+  </aside>
+</section>
+
+<!-- ============================ Controls ============================ -->
+<div class="controls">
+  <fieldset>
+    <legend>Field conditions</legend>
+    <label class="check"><input type="checkbox" id="c-sim" checked> Simulate a field capture</label>
+    <div class="row"><label for="c-sigma">Sensor noise σ</label><output id="o-sigma">20</output><input type="range" id="c-sigma" min="0" max="40" step="1" value="20"></div>
+    <div class="row"><label for="c-imin">Darkest light gain</label><output id="o-imin">0.40</output><input type="range" id="c-imin" min="0.05" max="1" step="0.01" value="0.4"></div>
+    <div class="row"><label for="c-imax">Brightest light gain</label><output id="o-imax">1.20</output><input type="range" id="c-imax" min="0.2" max="1.6" step="0.01" value="1.2"></div>
+    <button class="btn" id="c-reroll" type="button">Take a new capture</button>
+  </fieldset>
+  <fieldset>
+    <legend>Pipeline stages</legend>
+    <div class="row"><label for="c-restore">Restoration</label>
+      <select id="c-restore"><option value="none">off</option><option value="gaussian">Gaussian 5×5</option><option value="median">median 5×5</option><option value="bilateral">bilateral</option><option value="nlm" selected>non-local means</option></select></div>
+    <div class="row"><label for="c-enhance">Enhancement</label>
+      <select id="c-enhance"><option value="none">off</option><option value="clahe" selected>CLAHE</option><option value="histeq">histogram equalisation</option><option value="gamma">gamma 0.7</option></select></div>
+    <div class="row"><label for="c-q">JPEG quality</label><output id="o-q">50</output><input type="range" id="c-q" min="5" max="100" step="1" value="50"></div>
+    <label class="check"><input type="checkbox" id="c-lossless"> Lossless transmission (PNG)</label>
+    <label class="check"><input type="checkbox" id="c-seg" checked> Segmentation and morphology</label>
+  </fieldset>
+  <fieldset>
+    <legend>Decision costs</legend>
+    <div class="row"><label for="c-fn">Clear a diseased leaf (miss)</label><input type="number" id="c-fn" min="1" max="1000" step="1" value="50"></div>
+    <div class="row"><label for="c-fp">Flag a healthy leaf</label><input type="number" id="c-fp" min="0.1" max="100" step="0.1" value="1"></div>
+    <div class="row"><label for="c-ri">Re-image</label><input type="number" id="c-ri" min="0" max="100" step="0.1" value="2"></div>
+    <p class="muted" style="font-size:0.8rem" id="o-thr">Thresholds are re-chosen on the validation set whenever the costs change.</p>
+  </fieldset>
+</div>
+
+<!-- ============================ Course map ============================ -->
+<div class="map">
+  <table>
+    <thead><tr><th>Phase</th><th>Course topic</th><th>What happens here</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Fundamental steps: image acquisition</td><td>Field capture model: uneven illumination × image + sensor noise. Safety gate 1 checks exposure.</td></tr>
+      <tr><td>2</td><td>Restoration (objective)</td><td>Undo a known degradation; scored by PSNR / SSIM against the noise-free reference.</td></tr>
+      <tr><td>3</td><td>Enhancement (subjective)</td><td>Improve visibility (contrast, lighting) without a ground truth to score against.</td></tr>
+      <tr><td>4</td><td>Compression</td><td>JPEG over a limited uplink: bytes, compression ratio, PSNR, block artefacts.</td></tr>
+      <tr><td>5</td><td>Morphological processing and segmentation</td><td>Otsu threshold, opening, closing, connected components, hole filling. Safety gate 2 checks leaf area.</td></tr>
+      <tr><td>6</td><td>Recognition · CNN basics</td><td>Convolution, ReLU, pooling, feature maps, softmax and temperature-scaled probability.</td></tr>
+      <tr><td>7</td><td>Agent types: utility-based agent</td><td>Expected-cost decision under uncertainty with a value-of-information RE-IMAGE action.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============================ Part A: computer vision ============================ -->
+<div class="part">
+  <span class="eyebrow">Part A · Computer vision</span>
+  <h2>Digital image processing, step by step</h2>
+</div>
+
+<section class="phase" id="phase-1">
+  <div class="txt">
+    <span class="num">PHASE 1 · ACQUISITION</span>
+    <h3>Field capture and safety gate 1</h3>
+    <p>Lab photos are clean, but field photos are not. The capture model multiplies the leaf by a smooth <strong>illumination field</strong> (a random-direction gradient blended with an off-centre vignette) and adds Gaussian <strong>sensor noise</strong>. Keeping the noise-free version gives a reference, so restoration can be measured objectively later.</p>
+    <div class="formula">reference = G(x,y) · f(x,y)
+captured  = reference + N(0, σ²)</div>
+    <p><strong>Gate 1</strong> rejects photos whose mean grey level is outside [35, 235]: too dark or blown out to trust.</p>
+  </div>
+  <div class="viz">
+    <div class="plates">
+      <figure class="pl"><canvas id="p1-clean" width="128" height="128" class="smooth"></canvas><figcaption><b>Leaf</b> resized to 128×128 (area averaging)</figcaption></figure>
+      <figure class="pl"><canvas id="p1-illum" width="128" height="128"></canvas><figcaption><b>Illumination field G</b> (dark = low gain)</figcaption></figure>
+      <figure class="pl"><canvas id="p1-ref" width="128" height="128" class="smooth"></canvas><figcaption><b>Reference</b>: unevenly lit, noise-free</figcaption></figure>
+      <figure class="pl"><canvas id="p1-cap" width="128" height="128" class="smooth"></canvas><figcaption><b>Captured</b>: what the field unit sees</figcaption></figure>
+    </div>
+    <div class="chips" id="p1-chips"></div>
+  </div>
+</section>
+
+<section class="phase" id="phase-2">
+  <div class="txt">
+    <span class="num">PHASE 2 · RESTORATION</span>
+    <h3>Restoration is objective</h3>
+    <p>Restoration models the degradation and inverts it, so success has a number. Here the noise model is known, and the result is scored against the noise-free reference with <strong>PSNR</strong> and <strong>SSIM</strong>.</p>
+    <p><strong>Non-local means</strong> averages pixels whose surrounding 7×7 patches look alike within a 21×21 window. Median and Gaussian filters average only over a fixed neighbourhood, so they blur lesion edges more.</p>
+    <div class="formula">NLM: û(p) = Σ_q w(p,q) u(q) / Σ_q w(p,q)
+w(p,q) = exp(−‖P(p) − P(q)‖² / h²)</div>
+  </div>
+  <div class="viz">
+    <div class="plates">
+      <figure class="pl"><canvas id="p2-in" width="128" height="128" class="smooth"></canvas><figcaption><b>Captured</b> (input)</figcaption></figure>
+      <figure class="pl"><canvas id="p2-out" width="128" height="128" class="smooth"></canvas><figcaption><b>Restored</b> <span id="p2-method"></span></figcaption></figure>
+      <figure class="pl"><canvas id="p2-removed" width="128" height="128"></canvas><figcaption><b>What was removed</b>: |captured − restored| ×4</figcaption></figure>
+      <figure class="pl"><canvas id="p2-ref" width="128" height="128" class="smooth"></canvas><figcaption><b>Reference</b> the score is measured against</figcaption></figure>
+    </div>
+    <div class="chips" id="p2-chips"></div>
+  </div>
+</section>
+
+<section class="phase" id="phase-3">
+  <div class="txt">
+    <span class="num">PHASE 3 · ENHANCEMENT</span>
+    <h3>Enhancement is subjective</h3>
+    <p>Enhancement makes the image easier to see or analyse. There is no ground truth, so it is judged by its effect: contrast, entropy and how the histogram spreads.</p>
+    <p><strong>CLAHE</strong> equalises the histogram tile by tile (8×8 tiles), clips each tile's histogram at 2× the mean to stop noise blowing up, and blends neighbouring tiles bilinearly. It runs on the L channel of Lab only, so lesion colour, a key disease cue, is untouched.</p>
+  </div>
+  <div class="viz">
+    <div class="plates">
+      <figure class="pl"><canvas id="p3-in" width="128" height="128" class="smooth"></canvas><figcaption><b>Restored</b> (input)</figcaption></figure>
+      <figure class="pl"><canvas id="p3-out" width="128" height="128" class="smooth"></canvas><figcaption><b>Enhanced</b> <span id="p3-method"></span></figcaption></figure>
+    </div>
+    <canvas class="chart" id="p3-hist" width="720" height="120" aria-label="Grey-level histogram before and after enhancement"></canvas>
+    <div class="legend2"><span><i style="background:var(--muted)"></i>before enhancement</span><span><i style="background:var(--leaf)"></i>after enhancement</span><span>grey level 0 → 255</span></div>
+    <div class="chips" id="p3-chips"></div>
+  </div>
+</section>
+
+<section class="phase" id="phase-4">
+  <div class="txt">
+    <span class="num">PHASE 4 · COMPRESSION</span>
+    <h3>Transmission over a thin uplink</h3>
+    <p>A raw 128×128 RGB image is 49,152 bytes. <strong>JPEG</strong> converts to YCbCr, subsamples colour, takes an 8×8 DCT, and quantises high frequencies away; lower quality means coarser quantisation. The receiver, and therefore the CNN, only ever sees the decoded image.</p>
+    <p>The error map shows where information was lost: 8×8 block edges and fine texture such as lesion borders.</p>
+    <div class="formula">ratio = (H · W · 3) / bytes sent</div>
+  </div>
+  <div class="viz">
+    <div class="plates">
+      <figure class="pl"><canvas id="p4-in" width="128" height="128" class="smooth"></canvas><figcaption><b>Before transmission</b></figcaption></figure>
+      <figure class="pl"><canvas id="p4-out" width="128" height="128" class="smooth"></canvas><figcaption><b>Received</b> (decoded)</figcaption></figure>
+      <figure class="pl"><canvas id="p4-err" width="128" height="128"></canvas><figcaption><b>|error|</b> ×6, brighter = more loss</figcaption></figure>
+      <figure class="pl"><canvas id="p4-zoom" width="128" height="128"></canvas><figcaption><b>Centre crop ×4</b> showing 8×8 blocks</figcaption></figure>
+    </div>
+    <div class="chips" id="p4-chips"></div>
+  </div>
+</section>
+
+<section class="phase" id="phase-5">
+  <div class="txt">
+    <span class="num">PHASE 5 · MORPHOLOGY AND SEGMENTATION</span>
+    <h3>Find the leaf, discard the background</h3>
+    <p>Leaves are saturated green; paper and soil are grey. <strong>Otsu's method</strong> picks the saturation threshold that maximises between-class variance.</p>
+    <p><strong>Morphology</strong> then cleans the binary image: <em>opening</em> (erode, then dilate, 5×5 ellipse) removes speckle, <em>closing</em> (dilate, then erode, 7×7 ellipse ×2) bridges gaps. The <em>largest connected component</em> is kept, and <em>hole filling</em> restores lesions that thresholded as background. The leaf is masked, cropped to its bounding box and resized for the CNN.</p>
+    <p><strong>Gate 2</strong> rejects masks covering less than 5% or more than 95% of the frame, because segmentation has failed in those cases.</p>
+  </div>
+  <div class="viz">
+    <div class="plates wide">
+      <figure class="pl"><canvas id="p5-sat" width="128" height="128"></canvas><figcaption><b>HSV saturation</b> (V &lt; 25 set to 0)</figcaption></figure>
+      <figure class="pl"><canvas id="p5-bin" width="128" height="128"></canvas><figcaption><b>Otsu threshold</b> <span id="p5-t"></span></figcaption></figure>
+      <figure class="pl"><canvas id="p5-open" width="128" height="128"></canvas><figcaption><b>Opening</b> 5×5</figcaption></figure>
+      <figure class="pl"><canvas id="p5-close" width="128" height="128"></canvas><figcaption><b>Closing</b> 7×7 ×2</figcaption></figure>
+      <figure class="pl"><canvas id="p5-cc" width="128" height="128"></canvas><figcaption><b>Largest component</b> <span id="p5-ncc"></span></figcaption></figure>
+      <figure class="pl"><canvas id="p5-fill" width="128" height="128"></canvas><figcaption><b>Holes filled</b>: final mask</figcaption></figure>
+      <figure class="pl"><canvas id="p5-overlay" width="128" height="128" class="smooth"></canvas><figcaption><b>Mask outline</b> on the received image</figcaption></figure>
+      <figure class="pl"><canvas id="p5-crop" width="128" height="128" class="smooth"></canvas><figcaption><b>Masked crop</b>: CNN input</figcaption></figure>
+    </div>
+    <canvas class="chart" id="p5-hist" width="720" height="120" aria-label="Saturation histogram with Otsu threshold"></canvas>
+    <div class="legend2"><span><i style="background:var(--muted)"></i>saturation histogram (after 5×5 blur)</span><span><i style="background:var(--lesion)"></i>Otsu threshold</span></div>
+    <div class="chips" id="p5-chips"></div>
+  </div>
+</section>
+
+<!-- ============================ Part B: CNN ============================ -->
+<div class="part">
+  <span class="eyebrow">Part B · Neural network basics</span>
+  <h2>Recognition with a convolutional network</h2>
+</div>
+
+<section class="phase" id="phase-6">
+  <div class="txt">
+    <span class="num">PHASE 6 · RECOGNITION</span>
+    <h3>What the CNN sees</h3>
+    <p>A <strong>convolution</strong> slides small learned 3×3 filters over the image; each output channel is a <em>feature map</em> showing where its pattern occurs. <strong>ReLU</strong> keeps positive responses. <strong>Max pooling</strong> halves the resolution, so deeper layers see larger regions. Early maps respond to edges and colour; later ones to lesion-like texture.</p>
+    <p><strong>Global average pooling</strong> turns 128 maps into 128 numbers, and a linear layer gives two logits. <strong>Softmax with temperature T</strong> (fitted on validation data) turns them into a calibrated P(diseased), which the agent needs.</p>
+    <div class="formula">P(diseased) = e^(z₁/T) / (e^(z₀/T) + e^(z₁/T))</div>
+  </div>
+  <div class="viz">
+    <div class="arch" id="p6-arch"></div>
+    <div class="fmaps" id="p6-maps"></div>
+    <div class="chips" id="p6-chips"></div>
+  </div>
+</section>
+
+<!-- ============================ Part C: Agent ============================ -->
+<div class="part">
+  <span class="eyebrow">Part C · Agent types deep dive</span>
+  <h2>A utility-based agent decides under uncertainty</h2>
+</div>
+
+<section class="phase" id="phase-7">
+  <div class="txt">
+    <span class="num">PHASE 7 · DECISION</span>
+    <h3>Minimise expected cost, not error count</h3>
+    <p>A simple reflex agent would threshold at 0.5. A <strong>utility-based agent</strong> weighs outcomes: missing a diseased leaf costs far more than an unnecessary inspection, so it flags at a much lower probability.</p>
+    <div class="formula">E[CLEAR] = p · C_FN
+E[FLAG]  = (1 − p) · C_FP
+FLAG when p > C_FP / (C_FP + C_FN)</div>
+    <p><strong>RE-IMAGE</strong> buys information: when p falls in an uncertain band, or a safety gate fails, paying C_RI for a second photo is cheaper on average than guessing. The band [t_low, t_high] is chosen on the validation set. On the retake, a failed gate never clears.</p>
+  </div>
+  <div class="viz">
+    <svg class="axis" id="p7-axis" viewBox="0 0 640 96" role="img" aria-label="Decision thresholds on a log-odds probability axis"></svg>
+    <div class="util"><table id="p7-table"></table></div>
+    <div class="chips" id="p7-chips"></div>
+  </div>
+</section>
+
+<!-- ============================ Model card ============================ -->
+<div class="part">
+  <span class="eyebrow">Model card</span>
+  <h2>What this model is, and is not</h2>
+</div>
+<div class="modelcard" id="modelcard"></div>
+
+<footer>
+  <span>Data: PlantVillage (Hughes &amp; Salathé, <a href="https://arxiv.org/abs/1511.08060" target="_blank" rel="noopener">arXiv:1511.08060</a>; Mohanty, Hughes &amp; Salathé, <a href="https://doi.org/10.3389/fpls.2016.01419" target="_blank" rel="noopener">Front. Plant Sci. 2016</a>), CC BY-SA 3.0, via <a href="https://huggingface.co/datasets/mohanty/PlantVillage" target="_blank" rel="noopener">Hugging Face</a>. Sample leaves are from the held-out test split.</span>
+  <span>An educational demo, not a diagnostic tool. Every stage runs in your browser in plain JavaScript ported from the project's Python/OpenCV code.</span>
+</footer>
+</div>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

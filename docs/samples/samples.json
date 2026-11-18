@@ -1,0 +1,62 @@
+[
+ {
+  "file": "samples/healthy.jpg",
+  "cls": "Tomato___healthy",
+  "name": "Healthy",
+  "label": 0
+ },
+ {
+  "file": "samples/bacterial-spot.jpg",
+  "cls": "Tomato___Bacterial_spot",
+  "name": "Bacterial spot",
+  "label": 1
+ },
+ {
+  "file": "samples/early-blight.jpg",
+  "cls": "Tomato___Early_blight",
+  "name": "Early blight",
+  "label": 1
+ },
+ {
+  "file": "samples/late-blight.jpg",
+  "cls": "Tomato___Late_blight",
+  "name": "Late blight",
+  "label": 1
+ },
+ {
+  "file": "samples/leaf-mold.jpg",
+  "cls": "Tomato___Leaf_Mold",
+  "name": "Leaf Mold",
+  "label": 1
+ },
+ {
+  "file": "samples/septoria-leaf-spot.jpg",
+  "cls": "Tomato___Septoria_leaf_spot",
+  "name": "Septoria leaf spot",
+  "label": 1
+ },
+ {
+  "file": "samples/spider-mites-two-spotted-spider-mite.jpg",
+  "cls": "Tomato___Spider_mites Two-spotted_spider_mite",
+  "name": "Spider mites Two-spotted spider mite",
+  "label": 1
+ },
+ {
+  "file": "samples/target-spot.jpg",
+  "cls": "Tomato___Target_Spot",
+  "name": "Target Spot",
+  "label": 1
+ },
+ {
+  "file": "samples/tomato-yellow-leaf-curl-virus.jpg",
+  "cls": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+  "name": "Tomato Yellow Leaf Curl Virus",
+  "label": 1
+ },
+ {
+  "file": "samples/tomato-mosaic-virus.jpg",
+  "cls": "Tomato___Tomato_mosaic_virus",
+  "name": "Tomato mosaic virus",
+  "label": 1
+ }
+]
