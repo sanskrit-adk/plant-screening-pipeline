@@ -2,7 +2,11 @@
 .venv/
 __pycache__/
 
-# Generated outputs (anchored to the project root, so docs/figures/ is still committed)
+# Dataset download/cache (rebuilt automatically from Hugging Face)
 /data/
-/results/
-/figures/
+
+# Large or regenerable outputs; the experiment CSV/JSON results and figures ARE committed
+/results/model_cache/
+/results/web_check/
+/results/*.pt
+/results/*.log

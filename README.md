@@ -171,7 +171,86 @@ Six configurations are compared: `full`, `no_restoration`, `no_enhancement`, `no
 
 ---
 
-## 6. Outputs → assignment questions
+## 6. Results (real PlantVillage tomato, seed 42)
+
+These come from `python -m src.experiments --exp all` on the Hugging Face data. The run took 110 minutes on CPU.
+
+**Test set:** 990 held-out leaves (660 diseased, 330 healthy), grouped by leaf. The test set was used **once**, after early stopping, temperature and thresholds had been chosen on validation. **Settings:** degradation σ = 20, illumination gain 0.4–1.2; default pipeline NLM → CLAHE → JPEG q50 → segmentation → CNN.
+
+### 6.1 Stage ablation (each model retrained; Δ cost with a paired-bootstrap 95% CI)
+
+| config | cost / leaf | Δ vs full [95% CI] | sensitivity | specificity | CNN acc | AUC | bytes / image | ms / image |
+|---|---|---|---|---|---|---|---|---|
+| **full** | **0.259** | – | 99.5% | 71.5% | 95.2% | 0.990 | 3 041 | 88.7 |
+| no restoration | 0.283 | +0.024 [−0.22, +0.27] | 99.5% | 64.2% | 96.5% | 0.994 | 5 916 | 7.1 |
+| no enhancement | 0.268 | +0.009 [−0.21, +0.22] | 99.7% | 56.1% | 94.7% | 0.988 | 2 152 | 91.5 |
+| no compression | 0.223 | −0.035 [−0.22, +0.12] | 100% | 40.3% | 93.7% | 0.985 | 35 066 | 102.3 |
+| no segmentation | 0.086 | **−0.173 [−0.37, −0.02]** | 100% | 77.9% | 98.9% | 0.999 | 3 041 | 95.7 |
+| CNN only (raw) | 0.107 | −0.152 [−0.34, 0.00] | 100% | 71.5% | 97.8% | 0.999 | 42 681 | 7.6 |
+
+- **Only one change is measurable:** removing segmentation. Its CI excludes 0, and removing it *lowers* the cost. PlantVillage leaves sit on a plain, uniform background, which the CNN handles well. The Otsu mask (IoU 0.74 against the GT masks) sometimes cuts away diseased tissue.
+- **Restoration, enhancement and compression are within noise.** Their CIs straddle 0. Because one missed leaf costs 50, a single FN moves the cost by 0.05 per leaf, so the CIs are wide.
+- **Compression costs nothing measurable but saves 11.5× bandwidth.**
+
+### 6.2 Accuracy vs compression ratio (trained once on lossless, then tested at each JPEG quality)
+
+| JPEG q | lossless | 95 | 75 | 50 | **30** | 15 | 10 | 5 |
+|---|---|---|---|---|---|---|---|---|
+| ratio vs raw RGB | 1.4:1 (PNG) | 5.1:1 | 11.2:1 | 16.2:1 | **21.4:1** | 29.5:1 | 34.4:1 | 42.6:1 |
+| bytes / image | 35 066 | 9 576 | 4 387 | 3 041 | **2 301** | 1 666 | 1 430 | 1 153 |
+| PSNR (dB) | ∞ | 37.5 | 30.5 | 27.1 | **25.3** | 23.7 | 22.8 | 21.0 |
+| CNN accuracy | 93.7% | 94.8% | 94.3% | 94.4% | **93.1%** | 84.2% | 85.1% | 67.7% |
+| sensitivity | 100% | 100% | 99.7% | 100% | **100%** | 100% | 99.2% | 99.8% |
+| cost / leaf | 0.223 | 0.148 | 0.236 | 0.163 | **0.187** | 0.252 | 0.438 | 0.500 |
+
+- **Knee:** q15 (29.5:1), where accuracy falls more than 1 percentage point below lossless.
+- **Recommended operating point:** **q30, 21:1, 2.3 KB per leaf**, with no loss of accuracy or sensitivity.
+- Beyond the knee, the temperature rises (T = 1.9 at q15, 11.4 at q5). The agent then simply flags almost everything, so sensitivity stays high while the cost climbs.
+
+### 6.3 Accuracy vs denoising method
+
+| method | PSNR σ=10 / 20 / 30 (dB) | SSIM σ=20 | ms / image | CNN acc (retrained, σ=20) | sensitivity | cost / leaf | total ms / image |
+|---|---|---|---|---|---|---|---|
+| none | 28.2 / 22.2 / 18.7 | 0.54 | 0.0 | **96.5%** | 99.5% | 0.283 | 10.8 |
+| Gaussian 5×5 | 26.8 / 25.9 / 24.9 | 0.62 | 0.1 | 91.9% | 100% | **0.177** | 7.8 |
+| median 5×5 | 25.6 / 24.9 / 24.1 | 0.52 | 0.3 | 91.1% | 100% | 0.376 | 7.5 |
+| bilateral | **31.4 / 27.7** / 22.6 | **0.74** | 0.6 | 95.4% | 99.7% | 0.220 | 9.4 |
+| non-local means | 27.4 / 27.0 / 24.0 | 0.66 | 80 | 95.2% | 99.5% | 0.259 | 95.1 |
+| wavelet | 29.3 / 26.8 / **25.5** | 0.67 | 6 | 93.5% | 99.7% | 0.304 | 13.2 |
+
+- **Higher PSNR does not mean better decisions.** Bilateral wins on PSNR and SSIM at σ ≤ 20, yet the CNN trained on *un-denoised* images has the highest accuracy, because it learns to ignore the noise.
+- **NLM accounts for 82 of the full pipeline's 89 ms.** Bilateral gives about the same accuracy in about 9 ms, so it is the better field choice.
+
+### 6.4 Decision layer and error propagation
+
+**Policies on the full pipeline's test set:**
+
+| policy | cost / leaf | FN | FP | sensitivity |
+|---|---|---|---|---|
+| argmax at 0.5 | 1.682 | 33 | 15 | 95.0% |
+| Bayes threshold C_FP/(C_FP+C_FN) = 0.0196 | 0.203 | 0 | 201 | 100% |
+| validation-tuned CLEAR / FLAG / RE-IMAGE | 0.259 | 3 | 94 | 99.5% |
+
+- **Cost-aware thresholds cut the cost about 6.5×** compared with argmax.
+- **On this test set the fixed Bayes threshold did slightly better than the validation-tuned one.** We report the validation-tuned result because it is the protocol we committed to.
+- **The search chose an empty RE-IMAGE band** (t_low = t_high = 0.073), so re-imaging only happens when a safety gate fails.
+
+**Error propagation:**
+
+- **Harsh lighting** (gain down to 0.12) raises the cost from 0.259 to 0.287. All of the extra cost is extra false positives (94 → 118).
+- **The gates fired on 6 of 990 normal and 8 of 990 harsh images.** None of those leaves was then missed. Gates add a small re-image cost and did not change the FN count here.
+
+### 6.5 Latency budget (full pipeline, CPU, ms per image)
+
+| restore (NLM) | enhance (CLAHE) | JPEG enc+dec | segment | CNN | **total** |
+|---|---|---|---|---|---|
+| 82.2 | 0.4 | 0.3 | 1.1 | 4.7 | **88.7** |
+
+**Caveat:** a single seed (`experiments.seeds: [42]`). Set `seeds: [42, 43, 44]` in `config.yaml` to add between-seed standard deviations, which roughly doubles the runtime because trained models are cached in `results/model_cache/`.
+
+---
+
+## 7. Outputs → assignment questions
 
 | question | output |
 |---|---|
@@ -186,7 +265,7 @@ Six configurations are compared: `full`, `no_restoration`, `no_enhancement`, `no
 
 ---
 
-## 7. The website (`docs/`, GitHub Pages)
+## 8. The website (`docs/`, GitHub Pages)
 
 `docs/index.html` is an interactive **screening lab**. Everything runs client-side in plain JavaScript, with no server and no framework:
 
@@ -221,7 +300,7 @@ To preview locally, serve `docs/` over HTTP (`python -m http.server -d docs 8000
 
 ---
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 - **Seeding:** `set_seed` fixes Python, NumPy and PyTorch (CPU and CUDA), sets `PYTHONHASHSEED`, and sets `cudnn.deterministic = True` and `benchmark = False`.
 - **Data loading:** the DataLoader shuffles with a seeded `torch.Generator` and `num_workers = 0`.

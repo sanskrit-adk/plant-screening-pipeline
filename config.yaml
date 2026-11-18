@@ -53,7 +53,7 @@ gates:
   mask_area_max: 0.95
 
 experiments:
-  seeds: [42, 43, 44]            # ablation repeats (use [42] to save time)
+  seeds: [42]                    # ablation repeats; [42, 43, 44] adds between-seed std (~2x runtime)
   jpeg_qualities: [95, 75, 50, 30, 15, 10, 5]
   denoise_methods: [none, gaussian, median, bilateral, nlm, wavelet]
   noise_sigmas: [10, 20, 30]

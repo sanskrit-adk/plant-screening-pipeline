@@ -1,0 +1,230 @@
+{
+  "full": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 1.6818181818181819,
+        "sensitivity": 0.95,
+        "specificity": 0.9545454545454546,
+        "decision_acc": 0.9515151515151515,
+        "flag_rate": 0.6484848484848484,
+        "reimage_rate": 0.0,
+        "FN": 33,
+        "FP": 15
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.20303030303030303,
+        "sensitivity": 1.0,
+        "specificity": 0.39090909090909093,
+        "decision_acc": 0.796969696969697,
+        "flag_rate": 0.8696969696969697,
+        "reimage_rate": 0.0,
+        "FN": 0,
+        "FP": 201
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.07309183657169341,
+        "t_high": 0.07309183657169341,
+        "cost_per_sample": 0.2585858585858586,
+        "sensitivity": 0.9954545454545455,
+        "specificity": 0.7151515151515152,
+        "decision_acc": 0.902020202020202,
+        "flag_rate": 0.7585858585858586,
+        "reimage_rate": 0.006060606060606061,
+        "FN": 3,
+        "FP": 94
+      }
+    }
+  },
+  "no_restoration": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 0.9757575757575757,
+        "sensitivity": 0.9712121212121212,
+        "specificity": 0.9515151515151515,
+        "decision_acc": 0.9646464646464646,
+        "flag_rate": 0.6636363636363637,
+        "reimage_rate": 0.0,
+        "FN": 19,
+        "FP": 16
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.20909090909090908,
+        "sensitivity": 0.9984848484848485,
+        "specificity": 0.5242424242424243,
+        "decision_acc": 0.8404040404040404,
+        "flag_rate": 0.8242424242424242,
+        "reimage_rate": 0.0,
+        "FN": 1,
+        "FP": 157
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.04311039246618752,
+        "t_high": 0.04311039246618752,
+        "cost_per_sample": 0.2828282828282828,
+        "sensitivity": 0.9954545454545455,
+        "specificity": 0.6424242424242425,
+        "decision_acc": 0.8777777777777778,
+        "flag_rate": 0.7828282828282829,
+        "reimage_rate": 0.006060606060606061,
+        "FN": 3,
+        "FP": 118
+      }
+    }
+  },
+  "no_enhancement": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 0.6464646464646465,
+        "sensitivity": 0.9818181818181818,
+        "specificity": 0.8787878787878788,
+        "decision_acc": 0.9474747474747475,
+        "flag_rate": 0.694949494949495,
+        "reimage_rate": 0.0,
+        "FN": 12,
+        "FP": 40
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.2717171717171717,
+        "sensitivity": 0.996969696969697,
+        "specificity": 0.48787878787878786,
+        "decision_acc": 0.8272727272727273,
+        "flag_rate": 0.8353535353535354,
+        "reimage_rate": 0.0,
+        "FN": 2,
+        "FP": 169
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.030534292981028527,
+        "t_high": 0.030534292981028527,
+        "cost_per_sample": 0.2676767676767677,
+        "sensitivity": 0.996969696969697,
+        "specificity": 0.5606060606060606,
+        "decision_acc": 0.8515151515151516,
+        "flag_rate": 0.8111111111111111,
+        "reimage_rate": 0.010101010101010102,
+        "FN": 2,
+        "FP": 145
+      }
+    }
+  },
+  "no_compression": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 1.1020202020202021,
+        "sensitivity": 0.9681818181818181,
+        "specificity": 0.8757575757575757,
+        "decision_acc": 0.9373737373737374,
+        "flag_rate": 0.6868686868686869,
+        "reimage_rate": 0.0,
+        "FN": 21,
+        "FP": 41
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.2222222222222222,
+        "sensitivity": 1.0,
+        "specificity": 0.3333333333333333,
+        "decision_acc": 0.7777777777777778,
+        "flag_rate": 0.8888888888888888,
+        "reimage_rate": 0.0,
+        "FN": 0,
+        "FP": 220
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.028589674141258008,
+        "t_high": 0.028589674141258008,
+        "cost_per_sample": 0.22323232323232323,
+        "sensitivity": 1.0,
+        "specificity": 0.403030303030303,
+        "decision_acc": 0.8010101010101011,
+        "flag_rate": 0.8656565656565657,
+        "reimage_rate": 0.012121212121212121,
+        "FN": 0,
+        "FP": 197
+      }
+    }
+  },
+  "no_segmentation": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 0.30808080808080807,
+        "sensitivity": 0.990909090909091,
+        "specificity": 0.9848484848484849,
+        "decision_acc": 0.9888888888888889,
+        "flag_rate": 0.6656565656565656,
+        "reimage_rate": 0.0,
+        "FN": 6,
+        "FP": 5
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.045454545454545456,
+        "sensitivity": 1.0,
+        "specificity": 0.8636363636363636,
+        "decision_acc": 0.9545454545454546,
+        "flag_rate": 0.7121212121212122,
+        "reimage_rate": 0.0,
+        "FN": 0,
+        "FP": 45
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.006223050467669972,
+        "t_high": 0.006223050467669972,
+        "cost_per_sample": 0.08585858585858586,
+        "sensitivity": 1.0,
+        "specificity": 0.7787878787878788,
+        "decision_acc": 0.9262626262626262,
+        "flag_rate": 0.7404040404040404,
+        "reimage_rate": 0.006060606060606061,
+        "FN": 0,
+        "FP": 73
+      }
+    }
+  },
+  "cnn_only": {
+    "seed_42": {
+      "argmax_0.5": {
+        "threshold": 0.5,
+        "cost_per_sample": 1.0616161616161617,
+        "sensitivity": 0.9681818181818181,
+        "specificity": 0.996969696969697,
+        "decision_acc": 0.9777777777777777,
+        "flag_rate": 0.6464646464646465,
+        "reimage_rate": 0.0,
+        "FN": 21,
+        "FP": 1
+      },
+      "bayes_threshold": {
+        "threshold": 0.0196078431372549,
+        "cost_per_sample": 0.08484848484848485,
+        "sensitivity": 0.9984848484848485,
+        "specificity": 0.896969696969697,
+        "decision_acc": 0.9646464646464646,
+        "flag_rate": 0.7,
+        "reimage_rate": 0.0,
+        "FN": 1,
+        "FP": 34
+      },
+      "cost_aware_reimage": {
+        "t_low": 0.0021325371367856873,
+        "t_high": 0.0021325371367856873,
+        "cost_per_sample": 0.10707070707070707,
+        "sensitivity": 1.0,
+        "specificity": 0.7151515151515152,
+        "decision_acc": 0.9050505050505051,
+        "flag_rate": 0.7616161616161616,
+        "reimage_rate": 0.006060606060606061,
+        "FN": 0,
+        "FP": 94
+      }
+    }
+  }
+}

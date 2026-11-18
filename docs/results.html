@@ -176,72 +176,100 @@ else:                                    <span class="clear">CLEAR</span></div>
 </section>
 
 <section>
-  <span class="eyebrow">Experiments</span>
+  <span class="eyebrow">Experiments · real PlantVillage tomato · seed 42</span>
   <h2>What is each stage worth?</h2>
+  <p class="prose">There are 990 held-out test leaves (660 diseased, 330 healthy), grouped by physical leaf. The capture was degraded with Gaussian noise σ = 20 and an illumination gain of 0.4–1.2. Early stopping, temperature and thresholds were all chosen on validation, and the test set was scored once. The full run took 110 minutes on a CPU.</p>
   <div class="grid">
-    <div class="card"><h3>Ablation</h3><p>Full pipeline vs each stage off, plus CNN only. Retrained per config and seed. Paired bootstrap CI on cost vs full.</p></div>
-    <div class="card"><h3>Compression sweep</h3><p>Lossless, then q 95 → 5. Finds the knee where accuracy or sensitivity drops more than 1 pp, and the safe operating point.</p></div>
-    <div class="card"><h3>Denoising</h3><p>PSNR, SSIM and latency per method at σ 10/20/30, then end-to-end effect on the decision.</p></div>
-    <div class="card"><h3>Error propagation</h3><p>Normal vs harsh lighting, safety gates on vs off. Tracks misses, gate failures and segmentation IoU.</p></div>
+    <div class="card"><span class="tag">ablation</span><h3>Segmentation hurts here</h3><p>Removing it is the only measurable change (Δ cost −0.17, CI excludes 0). PlantVillage backgrounds are plain, and the Otsu mask (IoU 0.74) can clip diseased tissue.</p></div>
+    <div class="card"><span class="tag">compression</span><h3>q30 is free</h3><p>21:1 at 2.3 KB per leaf, with accuracy within 1 pp of lossless and 100% sensitivity. The knee is at q15 (29.5:1).</p></div>
+    <div class="card"><span class="tag">denoising</span><h3>PSNR ≠ decisions</h3><p>Bilateral has the best PSNR and SSIM, but the CNN trained on un-denoised images is most accurate. NLM is 82 of the pipeline's 89 ms.</p></div>
+    <div class="card"><span class="tag subj">decision</span><h3>Cost-aware ≫ argmax</h3><p>Cost per leaf is 0.26 with cost-aware thresholds vs 1.68 at argmax 0.5. Misses drop from 33 to 3.</p></div>
   </div>
-  <p class="notice"><strong>These numbers come from a smoke test, not from the real dataset.</strong> They are from <code>--quick</code> on synthetic leaves: 200 training images, 2 epochs, one seed. The CNN is barely trained (≈35% accuracy at the 0.5 threshold), so the comparisons below are not findings. They show that every experiment runs end to end. Run the full experiments on PlantVillage for real results.</p>
 </section>
 
 <section>
-  <h3>Ablation (smoke test)</h3>
+  <h3>Stage ablation (each model retrained)</h3>
   <div class="tbl"><table>
-    <thead><tr><th>Config</th><th>Cost / leaf</th><th>Sensitivity</th><th>CNN acc.</th><th>Δ cost vs full</th><th>95% CI</th><th>Measurable</th></tr></thead>
+    <thead><tr><th>Config</th><th>Cost / leaf</th><th>Δ vs full [95% CI]</th><th>Sensitivity</th><th>Specificity</th><th>CNN acc.</th><th>AUC</th><th>Bytes / image</th><th>ms / image</th></tr></thead>
     <tbody>
-      <tr class="hl"><td>full</td><td>0.312</td><td>1.000</td><td>0.350</td><td>0.000</td><td>[0.000, 0.000]</td><td>—</td></tr>
-      <tr><td>no_restoration</td><td>0.300</td><td>1.000</td><td>0.375</td><td>−0.013</td><td>[−0.075, 0.050]</td><td>no</td></tr>
-      <tr><td>no_enhancement</td><td>0.237</td><td>1.000</td><td>0.350</td><td>−0.075</td><td>[−0.150, −0.025]</td><td class="yes">yes</td></tr>
-      <tr><td>no_compression</td><td>0.938</td><td>0.981</td><td>0.350</td><td>0.625</td><td>[0.000, 1.875]</td><td>no</td></tr>
-      <tr><td>no_segmentation</td><td>0.300</td><td>1.000</td><td>0.350</td><td>−0.013</td><td>[−0.062, 0.037]</td><td>no</td></tr>
-      <tr><td>cnn_only</td><td>0.338</td><td>1.000</td><td>0.350</td><td>0.025</td><td>[−0.025, 0.075]</td><td>no</td></tr>
+      <tr class="hl"><td>full</td><td>0.259</td><td>—</td><td>99.5%</td><td>71.5%</td><td>95.2%</td><td>0.990</td><td>3 041</td><td>88.7</td></tr>
+      <tr><td>no restoration</td><td>0.283</td><td>+0.024 [−0.22, +0.27]</td><td>99.5%</td><td>64.2%</td><td>96.5%</td><td>0.994</td><td>5 916</td><td>7.1</td></tr>
+      <tr><td>no enhancement</td><td>0.268</td><td>+0.009 [−0.21, +0.22]</td><td>99.7%</td><td>56.1%</td><td>94.7%</td><td>0.988</td><td>2 152</td><td>91.5</td></tr>
+      <tr><td>no compression</td><td>0.223</td><td>−0.035 [−0.22, +0.12]</td><td>100%</td><td>40.3%</td><td>93.7%</td><td>0.985</td><td>35 066</td><td>102.3</td></tr>
+      <tr><td>no segmentation</td><td>0.086</td><td class="yes">−0.173 [−0.37, −0.02]</td><td>100%</td><td>77.9%</td><td>98.9%</td><td>0.999</td><td>3 041</td><td>95.7</td></tr>
+      <tr><td>CNN only (raw)</td><td>0.107</td><td>−0.152 [−0.34, 0.00]</td><td>100%</td><td>71.5%</td><td>97.8%</td><td>0.999</td><td>42 681</td><td>7.6</td></tr>
     </tbody>
   </table></div>
   <figure><div class="plate"><img src="figures/ablation.png" alt="Bar charts of expected cost per leaf and sensitivity for each ablation configuration, full pipeline highlighted"></div>
-    <figcaption>Expected cost and sensitivity per configuration (mean ± std over seeds; one seed in the smoke test).</figcaption></figure>
+    <figcaption>One missed leaf moves the cost by 0.05 per leaf, so the confidence intervals are wide. Only removing segmentation changes the cost measurably.</figcaption></figure>
 </section>
 
 <section>
-  <h3>Compression (smoke test)</h3>
+  <h3>Accuracy vs compression ratio</h3>
   <div class="tbl"><table>
-    <thead><tr><th>Setting</th><th>Ratio</th><th>KB / image</th><th>PSNR (dB)</th><th>Sensitivity</th><th>Cost / leaf</th></tr></thead>
+    <thead><tr><th>Setting</th><th>Ratio</th><th>Bytes / image</th><th>PSNR (dB)</th><th>CNN acc.</th><th>Sensitivity</th><th>Cost / leaf</th></tr></thead>
     <tbody>
-      <tr><td>lossless (PNG)</td><td>2.1 : 1</td><td>23.2</td><td>—</td><td>0.981</td><td>0.938</td></tr>
-      <tr><td>q75</td><td>21.4 : 1</td><td>2.25</td><td>36.7</td><td>0.962</td><td>1.575</td></tr>
-      <tr><td>q30</td><td>34.5 : 1</td><td>1.39</td><td>33.8</td><td>1.000</td><td>0.312</td></tr>
-      <tr><td>q5</td><td>49.9 : 1</td><td>0.96</td><td>26.3</td><td>0.962</td><td>1.587</td></tr>
+      <tr><td>lossless (PNG)</td><td>1.4 : 1</td><td>35 066</td><td>—</td><td>93.7%</td><td>100%</td><td>0.223</td></tr>
+      <tr><td>q95</td><td>5.1 : 1</td><td>9 576</td><td>37.5</td><td>94.8%</td><td>100%</td><td>0.148</td></tr>
+      <tr><td>q75</td><td>11.2 : 1</td><td>4 387</td><td>30.5</td><td>94.3%</td><td>99.7%</td><td>0.236</td></tr>
+      <tr><td>q50 (default)</td><td>16.2 : 1</td><td>3 041</td><td>27.1</td><td>94.4%</td><td>100%</td><td>0.163</td></tr>
+      <tr class="hl"><td>q30 (recommended)</td><td>21.4 : 1</td><td>2 301</td><td>25.3</td><td>93.1%</td><td>100%</td><td>0.187</td></tr>
+      <tr><td>q15 (knee)</td><td>29.5 : 1</td><td>1 666</td><td>23.7</td><td>84.2%</td><td>100%</td><td>0.252</td></tr>
+      <tr><td>q10</td><td>34.4 : 1</td><td>1 430</td><td>22.8</td><td>85.1%</td><td>99.2%</td><td>0.438</td></tr>
+      <tr><td>q5</td><td>42.6 : 1</td><td>1 153</td><td>21.0</td><td>67.7%</td><td>99.8%</td><td>0.500</td></tr>
     </tbody>
   </table></div>
   <figure><div class="plate"><img src="figures/compression_sweep.png" alt="Accuracy and sensitivity against compression ratio, and decision cost against kilobytes per image"></div>
-    <figcaption>(a) Accuracy and sensitivity against compression ratio, with the knee marked. (b) Decision cost against bandwidth.</figcaption></figure>
+    <figcaption>Trained once on lossless and tested at each quality. Beyond the knee the calibrated temperature rises (T = 11 at q5) and the agent flags almost everything. Sensitivity stays high but the cost climbs.</figcaption></figure>
   <figure><div class="plate"><img src="figures/jpeg_artifacts.png" alt="Zoomed leaf crops at JPEG quality 95, 30, 10 and 5 with absolute error maps"></div>
     <figcaption>JPEG block artefacts on a zoomed crop, and the absolute error against the uncompressed image.</figcaption></figure>
 </section>
 
 <section>
-  <h3>Restoration and enhancement</h3>
+  <h3>Accuracy vs denoising method</h3>
   <div class="tbl"><table>
-    <thead><tr><th>Denoiser (σ = 20)</th><th>PSNR (dB)</th><th>SSIM</th><th>ms / image</th></tr></thead>
+    <thead><tr><th>Method</th><th>PSNR σ 10 / 20 / 30</th><th>SSIM σ 20</th><th>Denoise ms</th><th>CNN acc.</th><th>Sensitivity</th><th>Cost / leaf</th><th>Total ms</th></tr></thead>
     <tbody>
-      <tr><td>none</td><td>22.16</td><td>0.231</td><td>0.00</td></tr>
-      <tr><td>median 5×5</td><td>32.74</td><td>0.802</td><td>0.32</td></tr>
-      <tr class="hl"><td>non-local means</td><td>35.32</td><td>0.949</td><td>74.1</td></tr>
+      <tr><td>none</td><td>28.2 / 22.2 / 18.7</td><td>0.54</td><td>0.0</td><td>96.5%</td><td>99.5%</td><td>0.283</td><td>10.8</td></tr>
+      <tr><td>Gaussian 5×5</td><td>26.8 / 25.9 / 24.9</td><td>0.62</td><td>0.1</td><td>91.9%</td><td>100%</td><td>0.177</td><td>7.8</td></tr>
+      <tr><td>median 5×5</td><td>25.6 / 24.9 / 24.1</td><td>0.52</td><td>0.3</td><td>91.1%</td><td>100%</td><td>0.376</td><td>7.5</td></tr>
+      <tr><td>bilateral</td><td>31.4 / 27.7 / 22.6</td><td>0.74</td><td>0.6</td><td>95.4%</td><td>99.7%</td><td>0.220</td><td>9.4</td></tr>
+      <tr class="hl"><td>non-local means (default)</td><td>27.4 / 27.0 / 24.0</td><td>0.66</td><td>80</td><td>95.2%</td><td>99.5%</td><td>0.259</td><td>95.1</td></tr>
+      <tr><td>wavelet</td><td>29.3 / 26.8 / 25.5</td><td>0.67</td><td>6</td><td>93.5%</td><td>99.7%</td><td>0.304</td><td>13.2</td></tr>
     </tbody>
   </table></div>
+  <figure><div class="plate"><img src="figures/denoise.png" alt="PSNR per denoiser against noise level, and end-to-end accuracy and sensitivity per denoiser"></div>
+    <figcaption>Objective restoration quality per method, and its end-to-end effect after retraining. Bilateral gives about NLM's accuracy at a tenth of the latency.</figcaption></figure>
   <figure><div class="plate"><img src="figures/restoration_vs_enhancement.png" alt="Five panels: clean leaf, noisy capture, NLM restored, dim uneven capture, CLAHE enhanced"></div>
     <figcaption>Restoration is scored against a known reference; enhancement is judged by contrast and entropy because no reference exists.</figcaption></figure>
-  <figure><div class="plate"><img src="figures/denoise.png" alt="PSNR per denoiser against noise level, and end-to-end accuracy and sensitivity per denoiser"></div>
-    <figcaption>Objective restoration quality per method, and its end-to-end effect after retraining.</figcaption></figure>
   <figure><div class="plate"><img src="figures/segmentation_steps.png" alt="Segmentation steps: restored and enhanced image, saturation channel, binary mask, masked crop"></div>
-    <figcaption>Segmentation steps. Mean IoU against ground-truth masks was 0.96 in the smoke test.</figcaption></figure>
+    <figcaption>Segmentation steps, scored against the PlantVillage segmented masks.</figcaption></figure>
 </section>
 
 <section>
-  <h3>Error propagation (smoke test)</h3>
-  <p class="prose">Harsh lighting (illumination floor 0.12) triggered no gate failures on synthetic leaves, so gates on and off gave identical results here. On real data, lower the illumination ceiling or raise the exposure gate's floor if the stress test should exercise the gates.</p>
+  <h3>Decision policies and error propagation</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Policy (full pipeline)</th><th>Cost / leaf</th><th>FN</th><th>FP</th><th>Sensitivity</th></tr></thead>
+    <tbody>
+      <tr><td>argmax at 0.5</td><td>1.682</td><td>33</td><td>15</td><td>95.0%</td></tr>
+      <tr><td>Bayes threshold 1/51</td><td>0.203</td><td>0</td><td>201</td><td>100%</td></tr>
+      <tr class="hl"><td>validation-tuned CLEAR / FLAG / RE-IMAGE</td><td>0.259</td><td>3</td><td>94</td><td>99.5%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Condition</th><th>Gates</th><th>Cost / leaf</th><th>FN</th><th>FP</th><th>Gate failures</th><th>Misses among them</th></tr></thead>
+    <tbody>
+      <tr><td>normal</td><td>off</td><td>0.246</td><td>3</td><td>94</td><td>6</td><td>0</td></tr>
+      <tr><td>normal</td><td>on</td><td>0.259</td><td>3</td><td>94</td><td>6</td><td>0</td></tr>
+      <tr><td>harsh lighting (gain 0.12)</td><td>off</td><td>0.271</td><td>3</td><td>118</td><td>8</td><td>0</td></tr>
+      <tr><td>harsh lighting (gain 0.12)</td><td>on</td><td>0.287</td><td>3</td><td>118</td><td>8</td><td>0</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose">The validation search chose an empty RE-IMAGE band (t<sub>low</sub> = t<sub>high</sub> = 0.073), so retakes happen only when a gate fails. On this test set the fixed Bayes threshold did slightly better than the tuned one. We report the tuned result because the protocol was fixed before the test. Harsh lighting adds 24 false positives but no misses. The gates fire rarely and add a small re-image cost.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Latency (CPU)</th><th>Restore (NLM)</th><th>Enhance</th><th>JPEG</th><th>Segment</th><th>CNN</th><th>Total</th></tr></thead>
+    <tbody><tr><td>ms / image</td><td>82.2</td><td>0.4</td><td>0.3</td><td>1.1</td><td>4.7</td><td>88.7</td></tr></tbody>
+  </table></div>
 </section>
 
 <section>
@@ -257,7 +285,7 @@ python -m src.experiments --exp all --quick --source synthetic
 
 <span class="c"># real PlantVillage (downloads about 2 GB once)</span>
 python -m src.experiments --exp all</pre>
-  <p class="prose">The full ablation trains 18 CNNs, about 1–2 hours on a CPU. Set <code>experiments.seeds: [42]</code> in <code>config.yaml</code> to cut that to 6.</p>
+  <p class="prose">With the default <code>experiments.seeds: [42]</code>, <code>--exp all</code> takes about 2 hours on a CPU. Trained models are cached in <code>results/model_cache/</code>; pass <code>--fresh</code> to retrain. Set <code>seeds: [42, 43, 44]</code> to add between-seed spread.</p>
 </section>
 
 <section>
@@ -274,7 +302,7 @@ python -m src.experiments --exp all</pre>
   </ul>
 </section>
 
-<footer>Built with PyTorch, OpenCV and scikit-image. Results on this page are from the synthetic smoke test of 17 November 2026.</footer>
+<footer>Built with PyTorch, OpenCV and scikit-image. Results on this page are from the full run on real PlantVillage data, 17 November 2026 (seed 42).</footer>
 </div>
 </body>
 </html>

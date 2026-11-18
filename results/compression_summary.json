@@ -1,0 +1,26 @@
+{
+  "tolerance_pp": 1.0,
+  "lossless": {
+    "bytes_per_image": 35065.77676767677,
+    "compression_ratio": 1.4017085754480634,
+    "cnn_acc": 0.9373737373737374,
+    "sensitivity": 1.0,
+    "cost": 0.22323232323232323
+  },
+  "knee": {
+    "quality": 15,
+    "compression_ratio": 29.499263131922724,
+    "cnn_acc": 0.8424242424242424,
+    "sensitivity": 1.0
+  },
+  "recommended": {
+    "quality": 30,
+    "compression_ratio": 21.362038197546422,
+    "bytes_per_image": 2300.90404040404,
+    "cnn_acc": 0.9313131313131313,
+    "sensitivity": 1.0,
+    "cost": 0.18686868686868688,
+    "psnr_db": 25.284898816752776
+  },
+  "retrained_per_quality": false
+}

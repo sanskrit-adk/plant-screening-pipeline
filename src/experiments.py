@@ -36,11 +36,13 @@ from .data import load_data
 from .decision import (baseline_policies, bayes_threshold, classifier_metrics,
                        search_thresholds, simulate)
 from .degrade import degrade, rng_for
-from .model import cnn_latency_ms, fit_temperature, predict_logits, probs_pos, train_model
+import torch
+
+from .model import SmallCNN, cnn_latency_ms, fit_temperature, predict_logits, probs_pos, train_model
 from .pipeline import PipelineConfig, benchmark_latency, process
 from .stages import (apply_mask, compress, enhance, iou, raw_bytes, restore,
                      saturation_channel, segment_mask)
-from .utils import FIGURES, RESULTS, ensure_dirs, load_config, set_seed
+from .utils import FIGURES, RESULTS, ensure_dirs, get_device, load_config, set_seed
 
 # ----------------------------------------------------------------------------
 # Plot style (reference palette; text in neutral ink, recessive axes)
@@ -109,6 +111,33 @@ def idx_of(data: dict, split: str) -> np.ndarray:
     return data["idx"][split]
 
 
+# ----------------------------------------------------------------------------
+# Trained-model cache
+# ----------------------------------------------------------------------------
+# Several experiments train exactly the same model (the full pipeline appears in the
+# ablation, the denoising study and the propagation test; "lossless" is both an ablation
+# config and a compression point). Training is deterministic for a given key, so trained
+# weights are cached in results/model_cache/ and reused. --fresh ignores the cache.
+USE_CACHE = True
+CACHE_DIR = RESULTS / "model_cache"
+
+
+def model_key(cfg: dict, p: PipelineConfig, seed: int, train_idx: np.ndarray) -> str:
+    """Hash of everything that determines the trained weights."""
+    import hashlib
+    d = dict(p=p.as_dict(), seed=int(seed), n_train=int(len(train_idx)), idx_sum=int(np.sum(train_idx)),
+             data={k: cfg["data"].get(k) for k in ("source", "img_size", "pos_to_neg_ratio", "val_frac", "test_frac")},
+             degrade=cfg["degrade"], gates=cfg["gates"],
+             train={k: cfg["train"][k] for k in ("epochs", "batch_size", "lr", "patience")})
+    return hashlib.sha1(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+
+def cache_path(cfg: dict, p: PipelineConfig, seed: int, train_idx: np.ndarray):
+    q = "lossless" if p.jpeg_q is None else f"q{p.jpeg_q}"
+    name = f"{p.restore}_{p.enhance}_{q}_seg{int(p.segment)}_s{seed}_{model_key(cfg, p, seed, train_idx)}.pt"
+    return CACHE_DIR / name
+
+
 def bootstrap_ci(diff: np.ndarray, n: int = 2000, seed: int = 0, alpha: float = 0.05):
     """Paired bootstrap of the mean of per-sample differences -> (mean, lo, hi)."""
     diff = np.asarray(diff, float)
@@ -151,11 +180,21 @@ def run_config(name: str, data: dict, cfg: dict, p: PipelineConfig, seed: int, m
     # 1. validation, first attempt
     Xv0, _, _, gv0, _ = process(X, va, p, cfg, seed, attempt=0)
 
-    # 2. train if no model was supplied
+    # 2. train if no model was supplied (or load identical weights from the cache)
     if model is None:
-        Xtr, _, _, _, _ = process(X, tr, p, cfg, seed, attempt=0)
-        set_seed(seed)
-        model = train_model(Xtr, y[tr], Xv0, y[va], cfg, seed, verbose=verbose)
+        path = cache_path(cfg, p, seed, tr)
+        if USE_CACHE and path.exists():
+            model = SmallCNN().to(get_device(cfg["train"].get("device", "auto")))
+            model.load_state_dict(torch.load(path, map_location="cpu"))
+            model.eval()
+            if verbose:
+                print(f"    loaded cached model {path.name}")
+        else:
+            Xtr, _, _, _, _ = process(X, tr, p, cfg, seed, attempt=0)
+            set_seed(seed)
+            model = train_model(Xtr, y[tr], Xv0, y[va], cfg, seed, verbose=verbose)
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            torch.save(model.state_dict(), path)
 
     # 3. validation, re-image attempt
     Xv1, _, _, gv1, _ = process(X, va, p, cfg, seed, attempt=1)
@@ -316,6 +355,7 @@ def exp_compression(data: dict, cfg: dict, retrain: bool = False) -> pd.DataFram
         row, m, _ = run_config(name, data, cfg, p, seed, model=None if retrain else model)
         if model is None and not retrain:
             model = m  # the lossless model is reused for every quality
+        add_latency(row, data, cfg, p, m, seed)   # storage (bytes) and latency next to accuracy
         row["psnr_db"] = jpeg_psnr(data, cfg, base, q, seed)
         row["kb_per_image"] = row["bytes_per_image"] / 1024.0
         rows.append(row)
@@ -606,8 +646,11 @@ def main(argv=None) -> None:
     ap.add_argument("--retrain", action="store_true", help="compression: retrain per JPEG quality")
     ap.add_argument("--source", default=None, choices=["hf", "folder", "synthetic"],
                     help="override data.source from the config")
+    ap.add_argument("--fresh", action="store_true", help="ignore cached trained models in results/model_cache")
     args = ap.parse_args(argv)
 
+    global USE_CACHE
+    USE_CACHE = not args.fresh
     cfg = load_config(args.config)
     cfg = copy.deepcopy(cfg)
     if args.source:
@@ -642,9 +685,10 @@ def main(argv=None) -> None:
         "denoise_objective": ["sigma", "method", "psnr_db", "ssim", "ms"],
         "denoise_end_to_end": ["config", "cnn_acc", "auc", "cost_per_sample", "sensitivity", "ms_total"],
         "compression": ["config", "compression_ratio", "kb_per_image", "psnr_db", "cnn_acc",
-                        "sensitivity", "cost_per_sample"],
+                        "sensitivity", "cost_per_sample", "ms_total"],
         "ablation": ["config", "cost_per_sample_mean", "cost_per_sample_std", "sensitivity_mean",
-                     "cnn_acc_mean", "delta_cost_vs_full", "delta_ci_lo", "delta_ci_hi", "measurable_change"],
+                     "cnn_acc_mean", "bytes_per_image_mean", "ms_total_mean", "delta_cost_vs_full",
+                     "delta_ci_lo", "delta_ci_hi", "measurable_change"],
         "propagation": ["condition", "gates", "cost_per_sample", "FN", "sensitivity", "reimage_rate",
                         "gate_fail_rate", "misses_among_gate_failures"],
     }
